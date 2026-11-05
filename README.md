@@ -75,7 +75,7 @@ After connecting, firmware waits 75 ms and sends four non-executing state-synchr
 
 ## Installation
 
-> **Unsigned release:** v1.0.0 is distributed unsigned and unnotarized. macOS Gatekeeper may block the downloaded app or require an explicit user override. If you do not want to run an unsigned binary, build macro-pad from source in Xcode. The project does not claim a Developer ID signature or Apple notarization.
+> **Distribution status:** v1.0.0 uses an ad-hoc signature to seal the completed application bundle, but it is not Apple Developer ID signed or notarized. macOS Gatekeeper may block the downloaded app or require an explicit user override. If you do not want to run an unnotarized binary, build macro-pad from source in Xcode. The project does not claim developer identity verification or Apple notarization.
 
 Requirements:
 
@@ -163,6 +163,8 @@ pio run -d firmware/macro-pad
 pio run -d firmware/macro-pad -t upload --upload-port /dev/cu.usbserial-XXXX
 pio device monitor --port /dev/cu.usbserial-XXXX --baud 115200
 ```
+
+Release DMGs must be created with [`scripts/package-release.sh`](scripts/package-release.sh). The packager signs the completed application bundle ad hoc, requires strict signature verification before packaging, mounts the resulting DMG, and independently verifies the packaged copy. See [release packaging](docs/releasing.md) for the full process and distribution limitations.
 
 Automated coverage includes protocol validation, state transitions, duplicate suppression, GPIO mapping, action routing, persistence/migration, URL validation, and command failures/timeouts. Hardware acceptance must separately verify pin wiring, radio discovery, bonding, reconnect behavior, simultaneous presses, and end-to-end actions.
 
