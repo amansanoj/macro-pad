@@ -337,8 +337,10 @@ struct MenuBarActions: View {
     }
 }
 
-#Preview("Menu Bar Popover") {
-    MenuBarPopover(model: AppModel())
+#Preview("Menu Bar Popover Dark") {
+    MenuBarPopover(model: PreviewFixtures.model())
+        .preferredColorScheme(.dark)
+        .allowsHitTesting(false)
 }
 
 struct MenuBarActionButton: View {

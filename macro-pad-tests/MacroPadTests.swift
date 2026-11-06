@@ -268,8 +268,8 @@ struct ActionPresentationTests {
 @Suite("Shortcut recording")
 struct ShortcutRecordingTests {
     @Test("Quartz events preserve key codes and modifiers", arguments: [
-        (keyCode: UInt16(21), flags: CGEventFlags([.maskCommand, .maskShift]), display: "⇧⌘4"),
-        (keyCode: UInt16(20), flags: CGEventFlags([.maskCommand, .maskShift]), display: "⇧⌘3"),
+        (keyCode: UInt16(21), flags: CGEventFlags([.maskCommand, .maskShift]), display: "⌘⇧4"),
+        (keyCode: UInt16(20), flags: CGEventFlags([.maskCommand, .maskShift]), display: "⌘⇧3"),
         (keyCode: UInt16(8), flags: CGEventFlags.maskCommand, display: "⌘C"),
         (keyCode: UInt16(12), flags: CGEventFlags.maskCommand, display: "⌘Q"),
         (keyCode: UInt16(49), flags: CGEventFlags.maskCommand, display: "⌘Space"),

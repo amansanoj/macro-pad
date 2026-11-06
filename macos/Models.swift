@@ -162,8 +162,8 @@ struct ShortcutDefinition: Codable, Equatable, Sendable {
         var value = ""
         if control { value += "⌃" }
         if option { value += "⌥" }
-        if shift { value += "⇧" }
         if command { value += "⌘" }
+        if shift { value += "⇧" }
         let renderedKey = keyLabel.count == 1 ? keyLabel.uppercased() : keyLabel
         return value + renderedKey
     }

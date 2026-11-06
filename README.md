@@ -4,10 +4,13 @@ macro-pad turns four mechanical switches connected to an ESP32-WROOM-32 into a c
 
 **Verification status:** the macOS application builds, 41 Swift tests pass, and firmware compiles for PlatformIO's `esp32dev` target and Arduino CLI's `esp32:esp32:esp32` target. Physical BLE discovery, switch behavior, and end-to-end macro execution still require an ESP32-WROOM-32 hardware acceptance run. No hardware result is implied by successful compilation.
 
+![macro-pad configuration in Dark Mode with Safari, Terminal, screenshot shortcut, and GitHub assignments](screenshots/configuration-dark.png)
+
 ## Index
 
 - [Overview](#overview)
 - [Features](#features)
+- [Screenshots](#screenshots)
 - [Hardware and wiring](#hardware-and-wiring)
 - [How it works](#how-it-works)
 - [Installation](#installation)
@@ -44,9 +47,13 @@ The companion is a native SwiftUI/AppKit menu bar utility with a compact status 
 - Simulation for all four keys through the real event dispatcher
 - Native application icons, readable URL hostnames, and action-specific key symbols
 
-![macro-pad menu bar popover](screenshots/menu-bar-popover-dark.png)
+## Screenshots
 
-![macro-pad configuration window](screenshots/configuration-light.png)
+![macro-pad menu bar popover in Dark Mode with four configured keys](screenshots/menu-bar-popover-dark.png)
+
+![macro-pad Discord application profile in Light Mode showing override, inherited, and disabled assignments](screenshots/application-profiles-light.png)
+
+![macro-pad Device settings in Light Mode showing disconnected state and automatic reconnection](screenshots/device-settings-light.png)
 
 ## Hardware and wiring
 

@@ -1048,30 +1048,16 @@ struct MediaInspector: View {
     }
 }
 
-#Preview {
-    ContentView(model: AppModel())
+#Preview("Configuration Dark") {
+    ContentView(model: PreviewFixtures.model())
+        .frame(width: 820, height: 340)
+        .preferredColorScheme(.dark)
+        .allowsHitTesting(false)
 }
 
-#Preview("Application Profile") {
-    let store = ConfigurationStore(
-        fileURL: FileManager.default.temporaryDirectory
-            .appending(path: "macro-pad-profile-preview.json")
-    )
-    let model = AppModel(store: store, ble: BLEController(), executor: ActionExecutor())
-    var configuration = model.configuration
-    configuration.keys[0].actionKind = .keyboardShortcut
-    configuration.keys[0].shortcut = ShortcutDefinition(
-        keyCode: 20,
-        keyLabel: "3",
-        command: true,
-        shift: true
-    )
-    var profile = ApplicationProfile(bundleIdentifier: "com.hnc.Discord", displayName: "Discord")
-    profile.assignments[0].mode = .override
-    profile.assignments[0].override = KeyConfiguration(id: .one)
-    profile.assignments[1].mode = .disabled
-    configuration.applicationProfiles = [profile]
-    model.configuration = configuration
-    model.editingProfileID = profile.bundleIdentifier
-    return ContentView(model: model)
+#Preview("Application Profiles Light") {
+    ContentView(model: PreviewFixtures.model(profile: true))
+        .frame(width: 820, height: 340)
+        .preferredColorScheme(.light)
+        .allowsHitTesting(false)
 }

@@ -173,3 +173,11 @@ struct AboutSettings: View {
         .formStyle(.grouped)
     }
 }
+
+#Preview("Device Settings Light") {
+    DeviceSettings(model: PreviewFixtures.model(device: true))
+        .scenePadding()
+        .frame(width: 500, height: 310)
+        .preferredColorScheme(.light)
+        .allowsHitTesting(false)
+}

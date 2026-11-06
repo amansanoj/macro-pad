@@ -106,7 +106,8 @@ final class AppModel {
         store: ConfigurationStore,
         ble: BLEController,
         executor: ActionExecutor,
-        applicationMonitor: ApplicationContextMonitor? = nil
+        applicationMonitor: ApplicationContextMonitor? = nil,
+        startServices: Bool = true
     ) {
         self.store = store
         self.ble = ble
@@ -130,8 +131,10 @@ final class AppModel {
         self.applicationMonitor.onChange = { [weak self] application in
             self?.receiveApplicationActivation(application)
         }
-        self.applicationMonitor.start()
-        ble.restoreAutomaticConnection()
+        if startServices {
+            self.applicationMonitor.start()
+            ble.restoreAutomaticConnection()
+        }
     }
 
     var selectedKeyID: MacroKey = .one
@@ -458,3 +461,92 @@ final class AppModel {
         }
     }
 }
+
+#if DEBUG
+@MainActor
+enum PreviewFixtures {
+    static func model(profile: Bool = false, device: Bool = false) -> AppModel {
+        let store = ConfigurationStore(
+            fileURL: FileManager.default.temporaryDirectory
+                .appending(path: "macro-pad-preview-\(UUID().uuidString).json")
+        )
+        let model = AppModel(
+            store: store,
+            ble: BLEController(),
+            executor: ActionExecutor(),
+            startServices: false
+        )
+        var configuration = AppConfiguration()
+        configuration.appearance = profile || device ? .light : .dark
+        configuration.keys = defaultAssignments()
+
+        if profile {
+            var discord = ApplicationProfile(
+                bundleIdentifier: "com.hnc.Discord",
+                displayName: "Discord",
+                applicationBookmark: bookmark(for: "/Applications/Discord.app")
+            )
+            var shortcut = KeyConfiguration(id: .one)
+            shortcut.actionKind = .keyboardShortcut
+            shortcut.shortcut = ShortcutDefinition(
+                keyCode: 40,
+                keyLabel: "K",
+                command: true
+            )
+            discord.assignments[0].mode = .override
+            discord.assignments[0].override = shortcut
+            discord.assignments[1].mode = .inheritDefault
+            discord.assignments[2].mode = .disabled
+            discord.assignments[3].mode = .inheritDefault
+            configuration.applicationProfiles = [discord]
+            model.editingProfileID = discord.bundleIdentifier
+            model.selectedKeyID = .one
+        } else {
+            model.selectedKeyID = .three
+        }
+
+        if device {
+            configuration.selectedPeripheralID = UUID(uuidString: "7A4D1000-5A7E-4D2F-9C6B-4B0A3E6D0100")
+            configuration.selectedPeripheralName = BLEProtocol.deviceName
+            configuration.automaticallyReconnect = true
+        }
+
+        model.configuration = configuration
+        return model
+    }
+
+    private static func defaultAssignments() -> [KeyConfiguration] {
+        var safari = KeyConfiguration(id: .one)
+        safari.actionKind = .launchApplication
+        safari.applicationName = "Safari"
+        safari.applicationBookmark = bookmark(for: "/Applications/Safari.app")
+
+        var terminal = KeyConfiguration(id: .two)
+        terminal.actionKind = .launchApplication
+        terminal.applicationName = "Terminal"
+        terminal.applicationBookmark = bookmark(for: "/System/Applications/Utilities/Terminal.app")
+
+        var screenshot = KeyConfiguration(id: .three)
+        screenshot.actionKind = .keyboardShortcut
+        screenshot.shortcut = ShortcutDefinition(
+            keyCode: 21,
+            keyLabel: "4",
+            command: true,
+            shift: true
+        )
+
+        var github = KeyConfiguration(id: .four)
+        github.actionKind = .openURL
+        github.urlString = "https://github.com/amansanoj/macro-pad"
+        return [safari, terminal, screenshot, github]
+    }
+
+    private static func bookmark(for path: String) -> Data? {
+        try? URL(fileURLWithPath: path).bookmarkData(
+            options: .minimalBookmark,
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
+    }
+}
+#endif
