@@ -338,7 +338,7 @@ struct MenuBarActions: View {
 }
 
 #if DEBUG
-#Preview("Menu Bar Popover Dark") {
+#Preview("Menu Bar Popover Dark", traits: .fixedLayout(width: 340, height: 284)) {
     MenuBarPopover(model: PreviewFixtures.model())
         .preferredColorScheme(.dark)
         .allowsHitTesting(false)

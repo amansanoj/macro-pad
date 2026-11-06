@@ -2,7 +2,7 @@
 
 macro-pad turns four mechanical switches connected to an ESP32-WROOM-32 into a configurable Bluetooth macro controller for macOS. The ESP32 sends debounced key transitions over a small custom BLE protocol; the native companion app owns assignments, permissions, persistence, and action execution.
 
-**Verification status:** the macOS application builds, 41 Swift tests pass, and firmware compiles for PlatformIO's `esp32dev` target and Arduino CLI's `esp32:esp32:esp32` target. Physical BLE discovery, switch behavior, and end-to-end macro execution still require an ESP32-WROOM-32 hardware acceptance run. No hardware result is implied by successful compilation.
+**Verification status:** the macOS application builds, 41 Swift tests pass, and firmware compiles for PlatformIO's `esp32dev` target and Arduino CLI's `esp32:esp32:esp32` target. Manual testing on physical ESP32-WROOM-32 hardware has validated BLE connectivity, four-button input, reconnection, configured macro execution, and application integrations. The repository does not include an automated hardware acceptance suite.
 
 ![macro-pad configuration in Dark Mode with Safari, Terminal, screenshot shortcut, and GitHub assignments](screenshots/configuration-dark.png)
 
@@ -49,11 +49,11 @@ The companion is a native SwiftUI/AppKit menu bar utility with a compact status 
 
 ## Screenshots
 
-![macro-pad menu bar popover in Dark Mode with four configured keys](screenshots/menu-bar-popover-dark.png)
-
-![macro-pad Discord application profile in Light Mode showing override, inherited, and disabled assignments](screenshots/application-profiles-light.png)
-
-![macro-pad Device settings in Light Mode showing disconnected state and automatic reconnection](screenshots/device-settings-light.png)
+| Configuration | Menu Bar |
+| --- | --- |
+| ![macro-pad configuration in Dark Mode](screenshots/configuration-dark.png) | ![macro-pad menu bar popover in Dark Mode](screenshots/menu-bar-popover-dark.png) |
+| Application Profiles | Device Settings |
+| ![macro-pad Discord application-specific profile in Dark Mode](screenshots/application-profiles-dark.png) | ![macro-pad Device settings in Dark Mode](screenshots/device-settings-dark.png) |
 
 ## Hardware and wiring
 
@@ -82,7 +82,7 @@ After connecting, firmware waits 75 ms and sends four non-executing state-synchr
 
 ## Installation
 
-> **Distribution status:** v1.0.0 uses an ad-hoc signature to seal the completed application bundle, but it is not Apple Developer ID signed or notarized. macOS Gatekeeper may block the downloaded app or require an explicit user override. If you do not want to run an unnotarized binary, build macro-pad from source in Xcode. The project does not claim developer identity verification or Apple notarization.
+> **Distribution status:** release DMGs use an ad-hoc signature to seal the completed application bundle, but they are not Apple Developer ID signed or notarized. macOS Gatekeeper may block the downloaded app or require an explicit user override. If you do not want to run an unnotarized binary, build macro-pad from source in Xcode. The project does not claim developer identity verification or Apple notarization.
 
 Requirements:
 
@@ -177,7 +177,7 @@ pio device monitor --port /dev/cu.usbserial-XXXX --baud 115200
 
 Release DMGs must be created with [`scripts/package-release.sh`](scripts/package-release.sh). The packager signs the completed application bundle ad hoc, requires strict signature verification before packaging, mounts the resulting DMG, and independently verifies the packaged copy. See [release packaging](docs/releasing.md) for the full process and distribution limitations.
 
-The 41 automated checks cover protocol validation, state transitions, duplicate suppression, GPIO mapping, reconnect intent, profile resolution, persistence/migration, shortcut safeguards, URL validation, and command output, failure, cancellation, and timeout handling. Hardware acceptance must separately verify pin wiring, radio discovery, bonding, reconnect behavior, simultaneous presses, and end-to-end actions.
+The 41 automated checks cover protocol validation, state transitions, duplicate suppression, GPIO mapping, reconnect intent, profile resolution, persistence/migration, shortcut safeguards, URL validation, and command output, failure, cancellation, and timeout handling. Manual physical-hardware testing has covered BLE connectivity, button input, reconnection, integrations, and end-to-end macro execution; it is separate from the automated suite.
 
 ## Troubleshooting
 
@@ -185,7 +185,7 @@ See [docs/troubleshooting.md](docs/troubleshooting.md) for discovery, wiring, pe
 
 ## Limitations
 
-- Physical behavior has not been claimed until tested on an ESP32-WROOM-32.
+- Physical ESP32-WROOM-32 behavior has been validated manually; there is no automated hardware acceptance suite.
 - CoreBluetooth background execution and reconnection are best-effort while the app is running, not indefinite guarantees.
 - BLE Just Works does not authenticate the device during first pairing; UUID and stored-identifier checks reduce accidental connections but do not defeat an active impersonator.
 - macOS has no supported public API for universal system media controls. Legacy saved assignments are preserved but cannot execute; use a user-configured Apple Shortcut instead. Private APIs are not used.

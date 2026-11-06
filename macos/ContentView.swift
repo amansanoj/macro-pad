@@ -243,6 +243,8 @@ struct ProfileSelector: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            ProfileIcon(profile: model.editingProfile, size: 22)
+
             Menu {
                 Button {
                     model.editingProfileID = nil
@@ -274,17 +276,11 @@ struct ProfileSelector: View {
                     model.addApplicationProfile()
                 }
             } label: {
-                HStack(spacing: 7) {
-                    ProfileIcon(profile: model.editingProfile, size: 22)
-                    Text(model.editingProfileName)
-                        .lineLimit(1)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .contentShape(.rect)
+                Text(model.editingProfileName)
+                    .lineLimit(1)
             }
             .menuStyle(.borderlessButton)
+            .controlSize(.small)
             .accessibilityLabel("Editing profile")
             .accessibilityValue(model.editingProfileName)
 
@@ -325,6 +321,7 @@ struct ProfileIcon: View {
             }
         }
         .frame(width: size, height: size)
+        .clipped()
         .accessibilityHidden(true)
     }
 }
@@ -365,6 +362,7 @@ struct MacroKeyTile: View {
             )
         }
         .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
         .onHover { isHovering = $0 }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isPressed)
         .help(presentation.tooltip)
@@ -1049,17 +1047,15 @@ struct MediaInspector: View {
 }
 
 #if DEBUG
-#Preview("Configuration Dark") {
+#Preview("Configuration Dark", traits: .fixedLayout(width: 820, height: 340)) {
     ContentView(model: PreviewFixtures.model())
-        .frame(width: 820, height: 340)
         .preferredColorScheme(.dark)
         .allowsHitTesting(false)
 }
 
-#Preview("Application Profiles Light") {
+#Preview("Application Profiles Dark", traits: .fixedLayout(width: 820, height: 340)) {
     ContentView(model: PreviewFixtures.model(profile: true))
-        .frame(width: 820, height: 340)
-        .preferredColorScheme(.light)
+        .preferredColorScheme(.dark)
         .allowsHitTesting(false)
 }
 #endif

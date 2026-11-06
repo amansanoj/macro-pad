@@ -3,25 +3,38 @@ import SwiftUI
 
 struct MacroPadSettingsView: View {
     @Bindable var model: AppModel
+    @State private var selection: SettingsTab
+
+    init(model: AppModel, selection: SettingsTab = .general) {
+        self.model = model
+        _selection = State(initialValue: selection)
+    }
 
     var body: some View {
-        TabView {
-            Tab("General", systemImage: "gearshape") {
+        TabView(selection: $selection) {
+            Tab("General", systemImage: "gearshape", value: SettingsTab.general) {
                 GeneralSettings(model: model)
             }
-            Tab("Device", systemImage: "dot.radiowaves.left.and.right") {
+            Tab("Device", systemImage: "dot.radiowaves.left.and.right", value: SettingsTab.device) {
                 DeviceSettings(model: model)
             }
-            Tab("Permissions", systemImage: "hand.raised") {
+            Tab("Permissions", systemImage: "hand.raised", value: SettingsTab.permissions) {
                 PermissionSettings(model: model)
             }
-            Tab("About", systemImage: "info.circle") {
+            Tab("About", systemImage: "info.circle", value: SettingsTab.about) {
                 AboutSettings()
             }
         }
         .scenePadding()
         .frame(width: 500, height: 310)
     }
+}
+
+enum SettingsTab: Hashable {
+    case general
+    case device
+    case permissions
+    case about
 }
 
 struct GeneralSettings: View {
@@ -175,11 +188,9 @@ struct AboutSettings: View {
 }
 
 #if DEBUG
-#Preview("Device Settings Light") {
-    DeviceSettings(model: PreviewFixtures.model(device: true))
-        .scenePadding()
-        .frame(width: 500, height: 310)
-        .preferredColorScheme(.light)
+#Preview("macro-pad") {
+    MacroPadSettingsView(model: PreviewFixtures.model(device: true), selection: .device)
+        .preferredColorScheme(.dark)
         .allowsHitTesting(false)
 }
 #endif

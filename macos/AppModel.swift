@@ -477,7 +477,7 @@ enum PreviewFixtures {
             startServices: false
         )
         var configuration = AppConfiguration()
-        configuration.appearance = profile || device ? .light : .dark
+        configuration.appearance = .dark
         configuration.keys = defaultAssignments()
 
         if profile {
