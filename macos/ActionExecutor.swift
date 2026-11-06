@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import Darwin
 import Foundation
 import Observation
 
@@ -17,6 +18,34 @@ struct ProcessResult: Equatable, Sendable {
     let standardOutput: String
     let standardError: String
     let timedOut: Bool
+}
+
+nonisolated private final class BoundedProcessOutput: @unchecked Sendable {
+    private let limit: Int
+    private let lock = NSLock()
+    private var data = Data()
+    private var wasTruncated = false
+
+    init(limit: Int) {
+        self.limit = limit
+    }
+
+    func append(_ chunk: Data) {
+        lock.withLock {
+            data.append(chunk)
+            if data.count > limit {
+                data.removeFirst(data.count - limit)
+                wasTruncated = true
+            }
+        }
+    }
+
+    func string() -> String {
+        lock.withLock {
+            let value = String(decoding: data, as: UTF8.self)
+            return wasTruncated ? "[earlier output truncated]\n\(value)" : value
+        }
+    }
 }
 
 enum ActionExecutionError: LocalizedError {
@@ -183,27 +212,79 @@ final class ActionExecutor {
         process.standardOutput = outputPipe
         process.standardError = errorPipe
 
+        let output = BoundedProcessOutput(limit: 64 * 1_024)
+        let error = BoundedProcessOutput(limit: 64 * 1_024)
+        let readers = DispatchGroup()
+
         try process.run()
+        drain(outputPipe.fileHandleForReading, into: output, group: readers)
+        drain(errorPipe.fileHandleForReading, into: error, group: readers)
         let deadline = ContinuousClock.now + .seconds(max(0.1, timeout))
         var timedOut = false
+        var wasCancelled = false
 
         while process.isRunning {
-            if ContinuousClock.now >= deadline {
+            if Task.isCancelled {
+                wasCancelled = true
+                process.terminate()
+                break
+            } else if ContinuousClock.now >= deadline {
                 timedOut = true
                 process.terminate()
                 break
             }
-            try await Task.sleep(for: .milliseconds(50))
+            try? await Task.sleep(for: .milliseconds(50))
         }
-        process.waitUntilExit()
+        if process.isRunning {
+            let terminationDeadline = ContinuousClock.now + .milliseconds(500)
+            while process.isRunning, ContinuousClock.now < terminationDeadline {
+                try? await Task.sleep(for: .milliseconds(25))
+            }
+            if process.isRunning {
+                kill(process.processIdentifier, SIGKILL)
+            }
+        }
 
-        let output = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let error = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        if await wait(for: readers, timeout: 1) == .timedOut {
+            try? outputPipe.fileHandleForReading.close()
+            try? errorPipe.fileHandleForReading.close()
+            _ = await wait(for: readers, timeout: 1)
+        }
+
+        if wasCancelled { throw CancellationError() }
         return ProcessResult(
             status: process.terminationStatus,
-            standardOutput: String(decoding: output, as: UTF8.self),
-            standardError: String(decoding: error, as: UTF8.self),
+            standardOutput: output.string(),
+            standardError: error.string(),
             timedOut: timedOut
         )
+    }
+
+    nonisolated private static func drain(
+        _ handle: FileHandle,
+        into destination: BoundedProcessOutput,
+        group: DispatchGroup
+    ) {
+        group.enter()
+        DispatchQueue.global(qos: .utility).async {
+            defer { group.leave() }
+            while true {
+                let chunk = handle.readData(ofLength: 16 * 1_024)
+                guard !chunk.isEmpty else { return }
+                destination.append(chunk)
+            }
+        }
+    }
+
+    nonisolated private static func wait(
+        for group: DispatchGroup,
+        timeout: TimeInterval
+    ) async -> DispatchTimeoutResult {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                continuation.resume(returning: group.wait(timeout: .now() + timeout))
+            }
+        }
     }
 }

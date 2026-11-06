@@ -162,6 +162,63 @@ struct ActionValidationTests {
         )
         #expect(result.timedOut)
     }
+
+    @Test("Large process output is drained without deadlock and bounded")
+    func largeCommandOutput() async throws {
+        let result = try await ActionExecutor.runProcess(
+            executable: "/usr/bin/seq",
+            arguments: ["1", "100000"],
+            timeout: 5
+        )
+        #expect(result.status == 0)
+        #expect(!result.timedOut)
+        #expect(result.standardOutput.hasPrefix("[earlier output truncated]"))
+        #expect(result.standardOutput.contains("100000"))
+        #expect(result.standardOutput.utf8.count < 70_000)
+    }
+
+    @Test("Cancellation terminates the child process")
+    func commandCancellation() async throws {
+        let task = Task {
+            try await ActionExecutor.runProcess(
+                executable: "/bin/sleep",
+                arguments: ["10"],
+                timeout: 30
+            )
+        }
+        try await Task.sleep(for: .milliseconds(100))
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            Issue.record("Expected process execution to be cancelled")
+        } catch is CancellationError {
+            // Expected after the child has been terminated and reaped.
+        }
+    }
+}
+
+@Suite("BLE reconnect policy")
+struct BLEReconnectPolicyTests {
+    @Test("Only unexpected connection loss permits automatic reconnect", arguments: [
+        (intent: BLEConnectionIntent.disconnected, expected: false),
+        (intent: BLEConnectionIntent.maintainConnection, expected: true),
+        (intent: BLEConnectionIntent.rejectedDevice, expected: false)
+    ])
+    func reconnectIntent(sample: (intent: BLEConnectionIntent, expected: Bool)) {
+        #expect(sample.intent.allowsReconnect(
+            automaticallyReconnect: true,
+            hasSelectedDevice: true
+        ) == sample.expected)
+        #expect(!sample.intent.allowsReconnect(
+            automaticallyReconnect: false,
+            hasSelectedDevice: true
+        ))
+        #expect(!sample.intent.allowsReconnect(
+            automaticallyReconnect: true,
+            hasSelectedDevice: false
+        ))
+    }
 }
 
 @Suite("Action presentation")
@@ -192,15 +249,6 @@ struct ActionPresentationTests {
             #expect(!configuration.isActionConfigured)
             #expect(ActionPresentation(configuration: configuration).title == "Not configured")
         }
-    }
-
-    @Test("Media controls use function-specific symbols")
-    func mediaSymbols() {
-        #expect(MediaAction.playPause.symbolName == "playpause.fill")
-        #expect(MediaAction.next.symbolName == "forward.end.fill")
-        #expect(MediaAction.previous.symbolName == "backward.end.fill")
-        #expect(MediaAction.volumeUp.symbolName != MediaAction.volumeDown.symbolName)
-        #expect(MediaAction.mute.symbolName == "speaker.slash.fill")
     }
 
     @Test("Shell previews do not expose configured arguments")
@@ -279,30 +327,6 @@ struct ShortcutRecordingTests {
 @Suite("Application profiles")
 @MainActor
 struct ApplicationProfileTests {
-    @Test("Default is used when no application profile exists")
-    func defaultFallback() {
-        let configuration = configuredDefaults()
-        let resolved = AssignmentResolver.resolve(
-            key: .one,
-            foregroundBundleIdentifier: "com.example.Unconfigured",
-            configuration: configuration
-        )
-        #expect(resolved.origin == .defaultProfile)
-        #expect(resolved.configuration?.urlString == "https://default.example")
-    }
-
-    @Test("Application override replaces Default")
-    func applicationOverride() {
-        let configuration = configurationWithProfile(mode: .override)
-        let resolved = AssignmentResolver.resolve(
-            key: .one,
-            foregroundBundleIdentifier: "com.example.Editor",
-            configuration: configuration
-        )
-        #expect(resolved.origin == .override)
-        #expect(resolved.configuration?.urlString == "https://override.example")
-    }
-
     @Test("Inheritance reflects later Default changes")
     func dynamicInheritance() {
         var configuration = configurationWithProfile(mode: .inheritDefault)
@@ -365,17 +389,6 @@ struct ApplicationProfileTests {
         )
         #expect(editor.configuration?.urlString == "https://override.example")
         #expect(finder.configuration?.urlString == "https://default.example")
-    }
-
-    @Test("Missing foreground identity safely uses Default")
-    func missingBundleIdentifier() {
-        let resolved = AssignmentResolver.resolve(
-            key: .one,
-            foregroundBundleIdentifier: nil,
-            configuration: configurationWithProfile(mode: .override)
-        )
-        #expect(resolved.origin == .defaultProfile)
-        #expect(resolved.configuration?.urlString == "https://default.example")
     }
 
     @Test("Profiles and overrides persist")

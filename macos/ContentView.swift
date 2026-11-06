@@ -749,7 +749,6 @@ struct ActionPicker: View {
                 actionButton(.shellCommand)
             }
             Section("System") {
-                actionButton(.mediaControl)
                 actionButton(.none)
             }
         } label: {
@@ -795,7 +794,7 @@ struct ActionConfigurationFields: View {
         case .shellCommand:
             ShellCommandInspector(model: model)
         case .mediaControl:
-            MediaInspector(model: model)
+            MediaInspector()
         }
     }
 }
@@ -1037,32 +1036,15 @@ struct ShellCommandInspector: View {
 }
 
 struct MediaInspector: View {
-    @Bindable var model: AppModel
-
     var body: some View {
         InspectorSection("Media Control") {
-            Picker("Control", selection: mediaBinding) {
-                ForEach(MediaAction.allCases) { action in
-                    Label(action.title, systemImage: action.symbolName)
-                        .tag(action)
-                }
-            }
-            .pickerStyle(.menu)
-
             Label(
-                "Global playback controls are limited by public macOS APIs. An Apple Shortcut is the reliable fallback.",
+                "This saved assignment is preserved, but system-wide media controls are not available through public macOS APIs. Choose Apple Shortcut for supported automation.",
                 systemImage: "info.circle"
             )
             .font(.caption)
             .foregroundStyle(.secondary)
         }
-    }
-
-    private var mediaBinding: Binding<MediaAction> {
-        Binding(
-            get: { model.selectedConfiguration.mediaAction },
-            set: { value in model.updateSelected { $0.mediaAction = value } }
-        )
     }
 }
 

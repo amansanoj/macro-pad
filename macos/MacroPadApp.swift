@@ -85,7 +85,6 @@ struct MenuBarPopover: View {
             )
         }
         .frame(width: 340)
-        .background(.bar)
     }
 
     private func openConfiguration(for key: MacroKey?) {

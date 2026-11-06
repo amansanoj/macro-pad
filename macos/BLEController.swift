@@ -31,6 +31,16 @@ enum ConnectionState: Equatable {
     }
 }
 
+enum BLEConnectionIntent: CaseIterable, Sendable {
+    case disconnected
+    case maintainConnection
+    case rejectedDevice
+
+    func allowsReconnect(automaticallyReconnect: Bool, hasSelectedDevice: Bool) -> Bool {
+        self == .maintainConnection && automaticallyReconnect && hasSelectedDevice
+    }
+}
+
 @MainActor
 @Observable
 final class BLEController: NSObject {
@@ -38,15 +48,23 @@ final class BLEController: NSObject {
     private(set) var bluetoothMessage = "Bluetooth status is not yet known."
     private(set) var discoveredDeviceName: String?
     var selectedPeripheralID: UUID?
-    var automaticallyReconnect = true
+    var automaticallyReconnect = true {
+        didSet {
+            if !automaticallyReconnect {
+                reconnectTask?.cancel()
+            }
+        }
+    }
     var onEvent: ((ButtonEvent) -> Void)?
     var onSelectedPeripheral: ((UUID, String) -> Void)?
+    var onConnectionReset: (() -> Void)?
 
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var eventCharacteristic: CBCharacteristic?
     private var reconnectAttempt = 0
     private var reconnectTask: Task<Void, Never>?
+    private var connectionIntent: BLEConnectionIntent = .disconnected
     private let serviceUUID = CBUUID(string: BLEProtocol.serviceUUID)
     private let characteristicUUID = CBUUID(string: BLEProtocol.eventCharacteristicUUID)
 
@@ -56,6 +74,7 @@ final class BLEController: NSObject {
     }
 
     func connect() {
+        connectionIntent = .maintainConnection
         reconnectTask?.cancel()
         guard central.state == .poweredOn else {
             updateBluetoothMessage()
@@ -79,9 +98,11 @@ final class BLEController: NSObject {
     }
 
     func disconnect() {
+        connectionIntent = .disconnected
         reconnectTask?.cancel()
         reconnectAttempt = 0
         central.stopScan()
+        resetEventConnection()
         if let peripheral {
             central.cancelPeripheralConnection(peripheral)
         } else {
@@ -94,20 +115,44 @@ final class BLEController: NSObject {
         selectedPeripheralID = nil
         discoveredDeviceName = nil
         peripheral = nil
-        eventCharacteristic = nil
+    }
+
+    func restoreAutomaticConnection() {
+        guard automaticallyReconnect, selectedPeripheralID != nil else { return }
+        connect()
     }
 
     private func scheduleReconnect() {
-        guard automaticallyReconnect, selectedPeripheralID != nil else { return }
+        guard connectionIntent.allowsReconnect(
+            automaticallyReconnect: automaticallyReconnect,
+            hasSelectedDevice: selectedPeripheralID != nil
+        ) else { return }
         reconnectAttempt += 1
         connectionState = .reconnecting(attempt: reconnectAttempt)
         let delay = min(pow(2.0, Double(reconnectAttempt - 1)), 30)
         reconnectTask?.cancel()
         reconnectTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(delay))
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled,
+                  self?.automaticallyReconnect == true,
+                  self?.connectionIntent == .maintainConnection else { return }
             self?.connect()
         }
+    }
+
+    private func rejectConnectedDevice(_ message: String) {
+        connectionIntent = .rejectedDevice
+        reconnectTask?.cancel()
+        resetEventConnection()
+        connectionState = .failed(message)
+        if let peripheral {
+            central.cancelPeripheralConnection(peripheral)
+        }
+    }
+
+    private func resetEventConnection() {
+        eventCharacteristic = nil
+        onConnectionReset?()
     }
 
     private func updateBluetoothMessage() {
@@ -136,14 +181,18 @@ final class BLEController: NSObject {
 extension BLEController: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         updateBluetoothMessage()
-        if central.state == .poweredOn, automaticallyReconnect, selectedPeripheralID != nil {
+        if central.state == .poweredOn,
+           connectionIntent == .maintainConnection,
+           automaticallyReconnect,
+           selectedPeripheralID != nil {
             connect()
         }
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
                         advertisementData: [String: Any], rssi RSSI: NSNumber) {
-        guard advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] != nil else { return }
+        guard connectionIntent == .maintainConnection,
+              advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] != nil else { return }
         central.stopScan()
         self.peripheral = peripheral
         peripheral.delegate = self
@@ -154,8 +203,13 @@ extension BLEController: CBCentralManagerDelegate {
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        guard connectionIntent == .maintainConnection else {
+            central.cancelPeripheralConnection(peripheral)
+            return
+        }
         reconnectTask?.cancel()
         reconnectAttempt = 0
+        resetEventConnection()
         selectedPeripheralID = peripheral.identifier
         discoveredDeviceName = peripheral.name ?? BLEProtocol.deviceName
         connectionState = .connecting
@@ -166,15 +220,24 @@ extension BLEController: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral,
                         error: (any Error)?) {
         bluetoothMessage = error?.localizedDescription ?? "The connection attempt failed."
-        scheduleReconnect()
+        if connectionIntent == .maintainConnection {
+            scheduleReconnect()
+        }
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral,
                         timestamp: CFAbsoluteTime, isReconnecting: Bool, error: (any Error)?) {
-        eventCharacteristic = nil
+        resetEventConnection()
         bluetoothMessage = error?.localizedDescription ?? "The device disconnected."
-        connectionState = .disconnected
-        scheduleReconnect()
+        switch connectionIntent {
+        case .disconnected:
+            connectionState = .disconnected
+        case .maintainConnection:
+            connectionState = .disconnected
+            scheduleReconnect()
+        case .rejectedDevice:
+            break
+        }
     }
 }
 
@@ -186,8 +249,7 @@ extension BLEController: CBPeripheralDelegate {
             return
         }
         guard let service = peripheral.services?.first(where: { $0.uuid == serviceUUID }) else {
-            connectionState = .failed("The required macro-pad service was not found.")
-            central.cancelPeripheralConnection(peripheral)
+            rejectConnectedDevice("The required macro-pad service was not found.")
             return
         }
         peripheral.discoverCharacteristics([characteristicUUID], for: service)
@@ -202,8 +264,7 @@ extension BLEController: CBPeripheralDelegate {
         }
         guard let characteristic = service.characteristics?.first(where: { $0.uuid == characteristicUUID }),
               characteristic.properties.contains(.notify) else {
-            connectionState = .failed("The event notification characteristic is missing.")
-            central.cancelPeripheralConnection(peripheral)
+            rejectConnectedDevice("The event notification characteristic is missing.")
             return
         }
         eventCharacteristic = characteristic
@@ -213,11 +274,11 @@ extension BLEController: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic,
                     error: (any Error)?) {
         if let error {
-            connectionState = .failed(error.localizedDescription)
+            rejectConnectedDevice(error.localizedDescription)
             return
         }
         guard characteristic.isNotifying else {
-            connectionState = .failed("The device refused event notifications.")
+            rejectConnectedDevice("The device refused event notifications.")
             return
         }
         connectionState = .connected

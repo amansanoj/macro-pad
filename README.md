@@ -2,7 +2,7 @@
 
 macro-pad turns four mechanical switches connected to an ESP32-WROOM-32 into a configurable Bluetooth macro controller for macOS. The ESP32 sends debounced key transitions over a small custom BLE protocol; the native companion app owns assignments, permissions, persistence, and action execution.
 
-**Verification status:** the macOS application builds, 40 Swift tests pass, and firmware compiles for PlatformIO's `esp32dev` target. Physical BLE discovery, switch behavior, and end-to-end macro execution still require an ESP32-WROOM-32 hardware acceptance run. No hardware result is implied by successful compilation.
+**Verification status:** the macOS application builds, 41 Swift tests pass, and firmware compiles for PlatformIO's `esp32dev` target and Arduino CLI's `esp32:esp32:esp32` target. Physical BLE discovery, switch behavior, and end-to-end macro execution still require an ESP32-WROOM-32 hardware acceptance run. No hardware result is implied by successful compilation.
 
 ## Index
 
@@ -33,7 +33,7 @@ The companion is a native SwiftUI/AppKit menu bar utility with a compact status 
 ## Features
 
 - Four independent key assignments with live pressed-state feedback
-- Launch application, keyboard shortcut, HTTP(S) URL, Apple Shortcut, direct process, media-control guidance, and no-action assignments
+- Launch application, keyboard shortcut, HTTP(S) URL, Apple Shortcut, direct process, and no-action assignments
 - Key-down-only execution with duplicate and held-key suppression
 - Service-filtered BLE discovery and a remembered CoreBluetooth peripheral identifier
 - Automatic reconnection with bounded exponential backoff
@@ -81,14 +81,14 @@ Requirements:
 
 | Component | Requirement |
 | --- | --- |
-| macOS | Current SDK deployment target configured by the included Xcode project |
+| macOS | 27.0 or later |
 | Xcode | Current installed Xcode capable of building the project |
 | Hardware | ESP32-WROOM-32 / ESP32 Dev Module |
 | Arduino CLI | 1.5.1 available during validation |
-| ESP32 Arduino core | 3.3.2 for the documented Arduino path |
+| ESP32 Arduino core | 3.3.12 for the documented Arduino path |
 | NimBLE-Arduino | 2.3.7 |
 
-The validated firmware build used PlatformIO Core 6.2.0, `espressif32@6.12.0` (Arduino-ESP32 2.0.17), and NimBLE-Arduino 2.3.7. The Arduino CLI 3.3.2 path is documented for current Arduino IDE users but was not the build used for this validation.
+Firmware validation covers both PlatformIO Core 6.2.0 with `espressif32@6.12.0` (Arduino-ESP32 2.0.17) and Arduino CLI 1.5.1 with ESP32 core 3.3.12. Both paths use NimBLE-Arduino 2.3.7.
 
 Clone the intended repository and open the included project:
 
@@ -100,6 +100,8 @@ open "macro-pad.xcodeproj"
 
 Select the `macro-pad` scheme, choose **My Mac**, and run with **Product → Run**.
 
+For the prebuilt release, download the DMG from [GitHub Releases](https://github.com/amansanoj/macro-pad/releases), open it, and drag `macro-pad.app` to Applications. Because the release is ad-hoc signed and unnotarized, the first launch may be blocked. Try opening the app normally first; if macOS blocks it, use the app-specific **Open Anyway** control in **System Settings → Privacy & Security**, then confirm **Open**. This approves only this app. Do not disable Gatekeeper globally, and only approve the download after verifying its published SHA-256 checksum.
+
 ## Firmware
 
 ### Arduino CLI
@@ -110,7 +112,7 @@ Install the ESP32 index, core, and NimBLE dependency:
 arduino-cli config init
 arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
 arduino-cli core update-index
-arduino-cli core install esp32:esp32@3.3.2
+arduino-cli core install esp32:esp32@3.3.12
 arduino-cli lib install "NimBLE-Arduino@2.3.7"
 ```
 
@@ -145,6 +147,8 @@ The existing four assignments form the permanent **Default** profile. Use the pr
 
 Shell actions require explicit confirmation, an absolute executable path, and separate arguments. They use `Process` directly without shell interpolation, capture stdout/stderr/status, enforce a timeout, and never request elevation. Do not put credentials in arguments or configuration.
 
+Older configuration files that contain a Media Control assignment remain readable and unchanged. New Media Control assignments are not offered because macOS has no supported public API for universal playback controls; use an Apple Shortcut for the target media application instead.
+
 Enable **Simulation Mode** from the input menu in the window toolbar to run any key through the same state machine and dispatcher without hardware. Simulation is visibly separate from normal BLE operation.
 
 ## Development
@@ -166,7 +170,7 @@ pio device monitor --port /dev/cu.usbserial-XXXX --baud 115200
 
 Release DMGs must be created with [`scripts/package-release.sh`](scripts/package-release.sh). The packager signs the completed application bundle ad hoc, requires strict signature verification before packaging, mounts the resulting DMG, and independently verifies the packaged copy. See [release packaging](docs/releasing.md) for the full process and distribution limitations.
 
-Automated coverage includes protocol validation, state transitions, duplicate suppression, GPIO mapping, action routing, persistence/migration, URL validation, and command failures/timeouts. Hardware acceptance must separately verify pin wiring, radio discovery, bonding, reconnect behavior, simultaneous presses, and end-to-end actions.
+The 41 automated checks cover protocol validation, state transitions, duplicate suppression, GPIO mapping, reconnect intent, profile resolution, persistence/migration, shortcut safeguards, URL validation, and command output, failure, cancellation, and timeout handling. Hardware acceptance must separately verify pin wiring, radio discovery, bonding, reconnect behavior, simultaneous presses, and end-to-end actions.
 
 ## Troubleshooting
 
@@ -177,7 +181,7 @@ See [docs/troubleshooting.md](docs/troubleshooting.md) for discovery, wiring, pe
 - Physical behavior has not been claimed until tested on an ESP32-WROOM-32.
 - CoreBluetooth background execution and reconnection are best-effort while the app is running, not indefinite guarantees.
 - BLE Just Works does not authenticate the device during first pairing; UUID and stored-identifier checks reduce accidental connections but do not defeat an active impersonator.
-- macOS has no supported public API for universal system media controls. The media action explains this limitation and recommends a user-configured Apple Shortcut; private APIs are not used.
+- macOS has no supported public API for universal system media controls. Legacy saved assignments are preserved but cannot execute; use a user-configured Apple Shortcut instead. Private APIs are not used.
 - Shortcut recording uses a temporary active Quartz event tap only while the recorder has focus. Most application and WindowServer shortcuts can be filtered, but macOS does not guarantee interception of secure or system-reserved combinations. If protected recording is unavailable, use the manual shortcut editor; the app never silently falls back to unsuppressed capture.
 - Profiles match applications by bundle identifier. They do not distinguish individual windows, documents, browser tabs, or websites.
 - Shell configuration is local plaintext metadata. Do not store secrets in commands or arguments.

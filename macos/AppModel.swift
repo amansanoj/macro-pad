@@ -124,10 +124,14 @@ final class AppModel {
             self?.configuration.selectedPeripheralID = identifier
             self?.configuration.selectedPeripheralName = name
         }
+        ble.onConnectionReset = { [weak self] in
+            self?.resetInputState()
+        }
         self.applicationMonitor.onChange = { [weak self] application in
             self?.receiveApplicationActivation(application)
         }
         self.applicationMonitor.start()
+        ble.restoreAutomaticConnection()
     }
 
     var selectedKeyID: MacroKey = .one
@@ -310,6 +314,11 @@ final class AppModel {
             stateMachine.reset()
             pressedKeys = []
         }
+    }
+
+    private func resetInputState() {
+        stateMachine.reset()
+        pressedKeys = []
     }
 
     func simulatePress(_ key: MacroKey) {
