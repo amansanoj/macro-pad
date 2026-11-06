@@ -466,6 +466,7 @@ final class AppModel {
 @MainActor
 enum PreviewFixtures {
     static func model(profile: Bool = false, device: Bool = false) -> AppModel {
+        let vscodiumURL = vscodiumApplicationURL()
         let store = ConfigurationStore(
             fileURL: FileManager.default.temporaryDirectory
                 .appending(path: "macro-pad-preview-\(UUID().uuidString).json")
@@ -478,31 +479,27 @@ enum PreviewFixtures {
         )
         var configuration = AppConfiguration()
         configuration.appearance = .dark
-        configuration.keys = defaultAssignments()
+        configuration.keys = defaultAssignments(vscodiumURL: vscodiumURL)
 
         if profile {
-            var discord = ApplicationProfile(
-                bundleIdentifier: "com.hnc.Discord",
-                displayName: "Discord",
-                applicationBookmark: bookmark(for: "/Applications/Discord.app")
+            var vscodium = ApplicationProfile(
+                bundleIdentifier: "com.vscodium",
+                displayName: "VSCodium",
+                applicationBookmark: bookmark(for: vscodiumURL)
             )
-            var shortcut = KeyConfiguration(id: .one)
-            shortcut.actionKind = .keyboardShortcut
-            shortcut.shortcut = ShortcutDefinition(
-                keyCode: 40,
-                keyLabel: "K",
-                command: true
-            )
-            discord.assignments[0].mode = .override
-            discord.assignments[0].override = shortcut
-            discord.assignments[1].mode = .inheritDefault
-            discord.assignments[2].mode = .disabled
-            discord.assignments[3].mode = .inheritDefault
-            configuration.applicationProfiles = [discord]
-            model.editingProfileID = discord.bundleIdentifier
+            var issues = KeyConfiguration(id: .one)
+            issues.actionKind = .openURL
+            issues.urlString = "https://github.com/amansanoj/macro-pad/issues"
+            vscodium.assignments[0].mode = .override
+            vscodium.assignments[0].override = issues
+            vscodium.assignments[1].mode = .inheritDefault
+            vscodium.assignments[2].mode = .disabled
+            vscodium.assignments[3].mode = .inheritDefault
+            configuration.applicationProfiles = [vscodium]
+            model.editingProfileID = vscodium.bundleIdentifier
             model.selectedKeyID = .one
         } else {
-            model.selectedKeyID = .three
+            model.selectedKeyID = .one
         }
 
         if device {
@@ -515,7 +512,7 @@ enum PreviewFixtures {
         return model
     }
 
-    private static func defaultAssignments() -> [KeyConfiguration] {
+    private static func defaultAssignments(vscodiumURL: URL) -> [KeyConfiguration] {
         var safari = KeyConfiguration(id: .one)
         safari.actionKind = .launchApplication
         safari.applicationName = "Safari"
@@ -526,27 +523,34 @@ enum PreviewFixtures {
         terminal.applicationName = "Terminal"
         terminal.applicationBookmark = bookmark(for: "/System/Applications/Utilities/Terminal.app")
 
-        var screenshot = KeyConfiguration(id: .three)
-        screenshot.actionKind = .keyboardShortcut
-        screenshot.shortcut = ShortcutDefinition(
-            keyCode: 21,
-            keyLabel: "4",
-            command: true,
-            shift: true
-        )
+        var vscodium = KeyConfiguration(id: .three)
+        vscodium.actionKind = .launchApplication
+        vscodium.applicationName = "VSCodium"
+        vscodium.applicationBookmark = bookmark(for: vscodiumURL)
 
         var github = KeyConfiguration(id: .four)
         github.actionKind = .openURL
         github.urlString = "https://github.com/amansanoj/macro-pad"
-        return [safari, terminal, screenshot, github]
+        return [safari, terminal, vscodium, github]
     }
 
     private static func bookmark(for path: String) -> Data? {
-        try? URL(fileURLWithPath: path).bookmarkData(
+        bookmark(for: URL(fileURLWithPath: path))
+    }
+
+    private static func bookmark(for url: URL) -> Data? {
+        try? url.bookmarkData(
             options: .minimalBookmark,
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         )
+    }
+
+    private static func vscodiumApplicationURL() -> URL {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.vscodium") else {
+            preconditionFailure("VSCodium must be installed to render screenshot previews.")
+        }
+        return url
     }
 }
 #endif

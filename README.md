@@ -4,7 +4,7 @@ macro-pad turns four mechanical switches connected to an ESP32-WROOM-32 into a c
 
 **Verification status:** the macOS application builds, 41 Swift tests pass, and firmware compiles for PlatformIO's `esp32dev` target and Arduino CLI's `esp32:esp32:esp32` target. Manual testing on physical ESP32-WROOM-32 hardware has validated BLE connectivity, four-button input, reconnection, configured macro execution, and application integrations. The repository does not include an automated hardware acceptance suite.
 
-![macro-pad configuration in Dark Mode with Safari, Terminal, screenshot shortcut, and GitHub assignments](screenshots/configuration-dark.png)
+![macro-pad configuration in Dark Mode with Safari, Terminal, VSCodium, and GitHub assignments](screenshots/configuration-dark.png)
 
 ## Index
 
@@ -53,7 +53,7 @@ The companion is a native SwiftUI/AppKit menu bar utility with a compact status 
 | --- | --- |
 | ![macro-pad configuration in Dark Mode](screenshots/configuration-dark.png) | ![macro-pad menu bar popover in Dark Mode](screenshots/menu-bar-popover-dark.png) |
 | Application Profiles | Device Settings |
-| ![macro-pad Discord application-specific profile in Dark Mode](screenshots/application-profiles-dark.png) | ![macro-pad Device settings in Dark Mode](screenshots/device-settings-dark.png) |
+| ![macro-pad VSCodium application-specific profile in Dark Mode](screenshots/application-profiles-dark.png) | ![macro-pad Device settings in Dark Mode](screenshots/device-settings-dark.png) |
 
 ## Hardware and wiring
 
