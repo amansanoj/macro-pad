@@ -1048,6 +1048,7 @@ struct MediaInspector: View {
     }
 }
 
+#if DEBUG
 #Preview("Configuration Dark") {
     ContentView(model: PreviewFixtures.model())
         .frame(width: 820, height: 340)
@@ -1061,3 +1062,4 @@ struct MediaInspector: View {
         .preferredColorScheme(.light)
         .allowsHitTesting(false)
 }
+#endif

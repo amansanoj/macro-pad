@@ -174,6 +174,7 @@ struct AboutSettings: View {
     }
 }
 
+#if DEBUG
 #Preview("Device Settings Light") {
     DeviceSettings(model: PreviewFixtures.model(device: true))
         .scenePadding()
@@ -181,3 +182,4 @@ struct AboutSettings: View {
         .preferredColorScheme(.light)
         .allowsHitTesting(false)
 }
+#endif

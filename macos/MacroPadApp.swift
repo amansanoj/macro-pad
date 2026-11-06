@@ -337,11 +337,13 @@ struct MenuBarActions: View {
     }
 }
 
+#if DEBUG
 #Preview("Menu Bar Popover Dark") {
     MenuBarPopover(model: PreviewFixtures.model())
         .preferredColorScheme(.dark)
         .allowsHitTesting(false)
 }
+#endif
 
 struct MenuBarActionButton: View {
     let title: String
