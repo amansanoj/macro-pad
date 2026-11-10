@@ -177,23 +177,25 @@ struct MacroPadPreview: View {
                         .foregroundStyle(.secondary)
                 }
 
-                HStack(spacing: 10) {
-                    ForEach(model.editingAssignments, id: \.key) { assignment in
-                        MacroKeyTile(
-                            assignment: assignment,
-                            isSelected: model.selectedKeyID == assignment.key,
-                            isPressed: model.pressedKeys.contains(assignment.key),
-                            simulationMode: model.simulationMode,
-                            select: {
-                                model.selectedKeyID = assignment.key
-                                if model.simulationMode {
-                                    model.simulatePress(assignment.key)
-                                }
-                            },
-                            configure: { model.selectedKeyID = assignment.key },
-                            test: { model.testAction(for: assignment.key) },
-                            reset: { model.resetKey(assignment.key) }
-                        )
+                GlassEffectContainer(spacing: 0) {
+                    HStack(spacing: 10) {
+                        ForEach(model.editingAssignments, id: \.key) { assignment in
+                            MacroKeyTile(
+                                assignment: assignment,
+                                isSelected: model.selectedKeyID == assignment.key,
+                                isPressed: model.pressedKeys.contains(assignment.key),
+                                simulationMode: model.simulationMode,
+                                select: {
+                                    model.selectedKeyID = assignment.key
+                                    if model.simulationMode {
+                                        model.simulatePress(assignment.key)
+                                    }
+                                },
+                                configure: { model.selectedKeyID = assignment.key },
+                                test: { model.testAction(for: assignment.key) },
+                                reset: { model.resetKey(assignment.key) }
+                            )
+                        }
                     }
                 }
 
@@ -357,7 +359,6 @@ struct MacroKeyTile: View {
                 isSelected: isSelected,
                 isPressed: isPressed,
                 iconSize: iconSize,
-                background: tileBackground,
                 border: borderColor
             )
         }
@@ -377,13 +378,6 @@ struct MacroKeyTile: View {
         .accessibilityLabel(accessibilityDescription)
         .accessibilityHint(simulationMode ? "Selects and simulates this key." : "Selects this key for configuration.")
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-    }
-
-    private var tileBackground: Color {
-        if isPressed { return Color.accentColor.opacity(0.16) }
-        if isSelected { return Color.accentColor.opacity(0.09) }
-        if isHovering { return Color(nsColor: .selectedContentBackgroundColor).opacity(0.08) }
-        return Color(nsColor: .controlBackgroundColor)
     }
 
     private var borderColor: Color {
@@ -413,7 +407,6 @@ struct MacroKeyTileContent: View {
     let isSelected: Bool
     let isPressed: Bool
     let iconSize: CGFloat
-    let background: Color
     let border: Color
 
     var body: some View {
@@ -469,7 +462,12 @@ struct MacroKeyTileContent: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 112)
-        .background(background, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .glassEffect(
+            .regular
+                .tint(isPressed ? Color.accentColor : nil)
+                .interactive(),
+            in: .rect(cornerRadius: 10)
+        )
         .overlay {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(border, lineWidth: isSelected ? 1.5 : 1)

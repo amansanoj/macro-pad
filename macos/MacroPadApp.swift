@@ -182,13 +182,15 @@ struct MenuBarKeyOverview: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 6) {
-                ForEach(assignments, id: \.key) { assignment in
-                    MenuBarKeyButton(
-                        assignment: assignment,
-                        isPressed: pressedKeys.contains(assignment.key),
-                        action: { selectKey(assignment.key) }
-                    )
+            GlassEffectContainer(spacing: 0) {
+                HStack(spacing: 6) {
+                    ForEach(assignments, id: \.key) { assignment in
+                        MenuBarKeyButton(
+                            assignment: assignment,
+                            isPressed: pressedKeys.contains(assignment.key),
+                            action: { selectKey(assignment.key) }
+                        )
+                    }
                 }
             }
         }
@@ -201,7 +203,6 @@ struct MenuBarKeyButton: View {
     let isPressed: Bool
     let action: () -> Void
 
-    @State private var isHovering = false
     @ScaledMetric(relativeTo: .body) private var iconSize = 28
 
     var body: some View {
@@ -242,22 +243,15 @@ struct MenuBarKeyButton: View {
             }
             .padding(8)
             .frame(maxWidth: .infinity, minHeight: 76)
-            .background(
-                isPressed
-                    ? Color.accentColor.opacity(0.14)
-                    : isHovering
-                        ? Color(nsColor: .selectedContentBackgroundColor).opacity(0.08)
-                        : Color(nsColor: .controlBackgroundColor),
-                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .glassEffect(
+                .regular
+                    .tint(isPressed ? Color.accentColor : nil)
+                    .interactive(),
+                in: .rect(cornerRadius: 8)
             )
-            .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1)
-            }
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
         .help("Configure \(assignment.key.title): \(tooltip)")
         .accessibilityLabel(accessibilityDescription)
         .accessibilityHint("Opens this key in the configuration window.")
