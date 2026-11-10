@@ -129,15 +129,12 @@ struct StatusIndicator: View {
     let state: ConnectionState
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color(nsColor: .controlBackgroundColor))
-            Image(systemName: state.symbol)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(color)
-                .font(.body.weight(.medium))
-        }
-        .frame(width: 30, height: 30)
+        Image(systemName: state.symbol)
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(color)
+            .font(.body.weight(.medium))
+            .frame(width: 30, height: 30)
+            .glassEffect(.regular, in: .circle)
         .accessibilityHidden(true)
     }
 
